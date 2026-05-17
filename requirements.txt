@@ -8,8 +8,7 @@ langfuse
 python-dotenv
 sentence-transformers
 nest_asyncio
-
-unstructured
+unstructured[pdf]
 pymupdf
 python-docx
 python-pptx
