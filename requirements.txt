@@ -1,0 +1,11 @@
+streamlit
+llama-index
+llama-index-llms-groq
+llama-index-embeddings-huggingface
+llama-index-vector-stores-qdrant
+qdrant-client
+langfuse
+python-dotenv
+sentence-transformers
+nest_asyncio
+requests
