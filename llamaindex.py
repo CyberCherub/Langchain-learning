@@ -1,6 +1,7 @@
 import os
-import requests
 import nest_asyncio
+
+from unstructured.partition.auto import partition
 
 nest_asyncio.apply()
 
@@ -10,9 +11,7 @@ from llama_index.core import (
     Document,
 )
 
-from llama_index.core.settings import (
-    Settings
-)
+from llama_index.core.settings import Settings
 
 from llama_index.vector_stores.qdrant import (
     QdrantVectorStore
@@ -22,9 +21,7 @@ from llama_index.core.postprocessor import (
     SentenceTransformerRerank
 )
 
-from llama_index.llms.groq import (
-    Groq
-)
+from llama_index.llms.groq import Groq
 
 from llama_index.embeddings.huggingface import (
     HuggingFaceEmbedding
@@ -32,7 +29,7 @@ from llama_index.embeddings.huggingface import (
 
 from utils import (
     get_qdrant_client,
-    get_langfuse_client,
+    langfuse,
 )
 
 # =========================
@@ -40,15 +37,13 @@ from utils import (
 # =========================
 
 Settings.llm = Groq(
-    model="llama3-8b-8192",
+    model="llama-3.1-8b-instant",
     api_key=os.getenv("GROQ_API_KEY"),
 )
 
 Settings.embed_model = (
     HuggingFaceEmbedding(
-        model_name=(
-            "BAAI/bge-small-en-v1.5"
-        )
+        model_name="BAAI/bge-small-en-v1.5"
     )
 )
 
@@ -60,10 +55,6 @@ qdrant_client = (
     get_qdrant_client()
 )
 
-langfuse = (
-    get_langfuse_client()
-)
-
 # =========================
 # VECTOR STORE
 # =========================
@@ -71,9 +62,7 @@ langfuse = (
 vector_store = (
     QdrantVectorStore(
         client=qdrant_client,
-        collection_name=(
-            "enterprise_rag"
-        ),
+        collection_name="enterprise_rag",
     )
 )
 
@@ -84,42 +73,18 @@ storage_context = (
 )
 
 # =========================
-# DOCLING API
+# PARSER
 # =========================
 
-DOCLING_URL = (
-    "http://localhost:2394"
-)
+def parse_file(path):
 
-# =========================
-# PARSE DOCUMENT
-# =========================
+    elements = partition(
+        filename=path
+    )
 
-def parse_document(path):
-
-    with open(path, "rb") as f:
-
-        files = {
-            "file": f
-        }
-
-        response = requests.post(
-            f"{DOCLING_URL}/v1alpha/convert/file",
-
-            files=files,
-
-            data={
-                "to_formats": "md"
-            },
-
-            timeout=300,
-        )
-
-    response.raise_for_status()
-
-    result = response.json()
-
-    return result["document"]["md_content"]
+    return "\n".join(
+        [str(el) for el in elements]
+    )
 
 # =========================
 # INGESTION
@@ -154,22 +119,24 @@ def ingest_documents(
 
             try:
 
-                text = parse_document(
+                text = parse_file(
                     path
                 )
 
-                documents.append(
-                    Document(
-                        text=text,
-                        metadata={
-                            "source": file
-                        }
-                    )
-                )
+                if text.strip():
 
-                print(
-                    f"Ingested: {file}"
-                )
+                    documents.append(
+                        Document(
+                            text=text,
+                            metadata={
+                                "source": file
+                            }
+                        )
+                    )
+
+                    print(
+                        f"Ingested: {file}"
+                    )
 
             except Exception as e:
 
@@ -216,7 +183,6 @@ def query_rag(query):
     query_engine = (
         index.as_query_engine(
             similarity_top_k=5,
-
             node_postprocessors=[
                 reranker
             ],
@@ -225,14 +191,6 @@ def query_rag(query):
 
     response = query_engine.query(
         query
-    )
-
-    langfuse.trace(
-        name="rag_query",
-
-        input=query,
-
-        output=str(response),
     )
 
     sources = []
@@ -244,6 +202,19 @@ def query_rag(query):
         sources.append(
             node.metadata
         )
+
+    # Langfuse event logging
+    langfuse.create_event(
+        name="rag_query",
+        input={
+            "query": query
+        },
+        output={
+            "response": str(response)
+        }
+    )
+
+    langfuse.flush()
 
     return (
         str(response),

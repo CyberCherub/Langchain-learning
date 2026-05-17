@@ -8,4 +8,11 @@ langfuse
 python-dotenv
 sentence-transformers
 nest_asyncio
-requests
+
+unstructured
+pymupdf
+python-docx
+python-pptx
+pillow
+rapidocr-onnxruntime
+moviepy

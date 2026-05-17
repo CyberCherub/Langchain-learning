@@ -1,10 +1,8 @@
 import streamlit as st
 
-from llamaindex import query_rag
-
-# =========================
-# PAGE CONFIG
-# =========================
+from llamaindex import (
+    query_rag
+)
 
 st.set_page_config(
     page_title="Enterprise RAG Chat",
@@ -15,19 +13,11 @@ st.title(
     "Enterprise RAG Chat"
 )
 
-# =========================
-# SESSION STATE
-# =========================
-
 if "history" not in (
     st.session_state
 ):
 
     st.session_state.history = []
-
-# =========================
-# INPUT FORM
-# =========================
 
 with st.form("chat_form"):
 
@@ -40,10 +30,6 @@ with st.form("chat_form"):
             "Submit"
         )
     )
-
-# =========================
-# QUERY
-# =========================
 
 if (
     submitted
@@ -80,10 +66,6 @@ if (
         except Exception as e:
 
             st.error(str(e))
-
-# =========================
-# HISTORY
-# =========================
 
 for chat in reversed(
     st.session_state.history

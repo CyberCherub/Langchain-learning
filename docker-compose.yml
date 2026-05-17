@@ -5,21 +5,11 @@ services:
   qdrant:
     image: qdrant/qdrant
 
-    container_name: qdrant
-
     ports:
       - "6333:6333"
 
     volumes:
       - qdrant_storage:/qdrant/storage
-
-  docling:
-    image: quay.io/docling-project/docling-serve
-
-    container_name: docling
-
-    ports:
-      - "2394:5001"
 
 volumes:
   qdrant_storage:
